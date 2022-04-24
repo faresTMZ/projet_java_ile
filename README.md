@@ -35,4 +35,4 @@ Comme mentionnée dans la partie 2, nous avons réutilisé les squelettes du TP1
 
 ## Diagramme de classe
 
-![Diagramme de Classe](/projet_java_test/diagramme-de-classe.png)
+![Diagramme de Classe](/diagramme-de-classe.png)
