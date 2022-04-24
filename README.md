@@ -4,6 +4,7 @@
 - Sac de sable : clique droit sur n'importe quelle case innondée
 - Helicoptère : clique gauche sur n'importe quelle case non submergée
 
+
 ## Rapport
 
 ### 1. Les parties du sujet traitées.
@@ -30,3 +31,8 @@ Hormis la question bonus du 10.2 que nous n'avons pas eu le temps de finir, nous
 ### 4. Morceaux de code écrits à plusieurs ou empruntés ailleurs.
 
 Comme mentionnée dans la partie 2, nous avons réutilisé les squelettes du TP1 du jeux NReines pour l'affichage. Hormis cela, nous n'avons n'avons emprunté de code nul
+
+
+## Diagramme de classe
+
+![Diagramme de Classe](/projet_java_test/blob/master/diagramme-de-classe.png)
