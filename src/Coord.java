@@ -18,13 +18,9 @@ public class Coord {
         return this.x == other.x && this.y == other.y;
     }
 
-    public int x() {
-        return this.x;
-    }
+    public int x() { return this.x; }
 
-    public int y() {
-        return this.y;
-    }
+    public int y() { return this.y; }
 
     public void set_coord(int x, int y) {
         this.x = x;
@@ -43,13 +39,13 @@ public class Coord {
 
     public boolean is_in_bound() {
         boolean output = false;
-        int i = this.x();
-        int j = this.y();
-        if (i == 2 || i == 3) {
+        int x = this.x();
+        int y = this.y();
+        if (x == 2 || x == 3) {
             output = true;
-        } else if ((i == 1 || i == 4) && 1 <= j && j <= 4) {
+        } else if ((x == 1 || x == 4) && 1 <= y && y <= 4) {
             output = true;
-        } else if ((i == 0 || i == 5) && 2 <= j && j <= 3) {
+        } else if ((x == 0 || x == 5) && 2 <= y && y <= 3) {
             output = true;
         }
         return output;

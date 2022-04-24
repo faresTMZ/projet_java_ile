@@ -3,17 +3,30 @@ package src;
 import java.util.*;
 import IG.Grille;
 
+enum Element {
+    WATER,
+    EARTH,
+    FIRE,
+    AIR,
+}
+
+enum Direction {
+    UP,
+    DOWN,
+    RIGHT,
+    LEFT,
+}
 
 class Plateau extends Grille {
     private Case[][] grid; 
     private Coord heliport;
-    private HashMap<Coord, Element> artifacts;
+    private ArrayList<Coord> artifacts; // WATER EARTH FIRE AIR
     private ArrayList<Player> players;
     private ArrayList<Case> not_submerged;
     private ArrayList<Case> submerged;
     private int turn;
-    
-    public Plateau(int taille, int heli_x, int heli_y, ArrayList<Player> players) {
+
+    public Plateau(int taille, int heli_x, int heli_y) {
         super(taille, taille);
         this.not_submerged = new ArrayList<Case>();
         this.submerged = new ArrayList<Case>();
@@ -21,11 +34,7 @@ class Plateau extends Grille {
         this.grid = new Case[taille][taille]; 
         for (int i = 0; i < taille; i++) {
             for (int j = 0; j < taille; j++) {
-                boolean pion = false;
-                if(i == heli_x && j == heli_y) {
-                    pion = true;
-                }
-                Case new_case = new Case(pion, i, j, 0);
+                Case new_case = new Case(this, false, i, j, 0);
                 this.grid[i][j] = new_case;
                 this.ajouteElement(new_case);
                 if (new_case.is_in_bound())
@@ -35,69 +44,117 @@ class Plateau extends Grille {
 
         this.heliport = new Coord(heli_x, heli_y);
 
-        this.artifacts = new HashMap<Coord, Element>();
-        this.artifacts.put(new Coord(1, 1), Element.WATER);
-        this.artifacts.put(new Coord(1, 4), Element.EARTH);
-        this.artifacts.put(new Coord(4, 1), Element.FIRE);
-        this.artifacts.put(new Coord(4, 4), Element.AIR);
+        this.artifacts = new ArrayList<Coord>();
+        this.artifacts.add(new Coord(1, 1));
+        this.artifacts.add(new Coord(1, 4));
+        this.artifacts.add(new Coord(4, 1));
+        this.artifacts.add(new Coord(4, 4));
+        this.players = new ArrayList<Player>();
+        this.turn = 0;
+    }
+    
+    public Plateau(int taille, int heli_x, int heli_y, ArrayList<Player> players) {
+        this(taille, heli_x, heli_y);
+        
+        for (int i = 0; i < taille; i++)
+            for (int j = 0; j < taille; j++)
+                if(i == players.get(0).coord().x() && j == players.get(0).coord().y())
+                    this.grid[i][j].add_pion();
+    
         this.players = players;
-        this.turn = 0;      
     }
 
-    public Case get_case(Coord coord) {
-        return grid[coord.x()][coord.y()];
+    public Case get_case(int x, int y) { return grid[x][y]; }
+
+    public Case get_case(Coord coord) { return grid[coord.x()][coord.y()]; }
+
+    public Coord get_heliport() { return this.heliport; }
+
+    public ArrayList<Coord> get_artifacts() { return this.artifacts; }
+
+    public ArrayList<Player> get_players() { return this.players; }
+
+    public Element artifact_element(Coord c) {
+        if (c.equal(new Coord(1, 1)))
+            return Element.WATER;
+        if (c.equal(new Coord(1, 4)))
+            return Element.EARTH;
+        if (c.equal(new Coord(4, 1)))
+            return Element.FIRE;
+        if (c.equal(new Coord(4, 4)))
+            return Element.AIR;
+        return Element.WATER;
     }
 
-    public Coord get_heliport() {
-        return this.heliport;
+    public Player get_player(int idx) { return this.players.get(idx); }
+
+    public int get_turn() { return this.turn; }
+
+    public void add_player(Player new_player) {
+        this.players.add(new_player);
+        this.get_player_case(new_player).add_pion();
     }
 
-    public HashMap<Coord, Element> get_artifacts() {
-        return this.artifacts;
-    }
+    public Case get_player_case(Player player) { return this.get_case(player.coord()); }
 
-    public Element get_element(Coord c) {
-        return this.artifacts.get(c);
-    }
-
-    public Player get_player(int idx) {
-        return this.players.get(idx);
-    }
-
-    public int get_turn() {
-        return this.turn;
+    public void kill(Player player) {
+        this.players.remove(player);
+        Case death_case = this.get_player_case(player);
+        death_case.remove_pion();
+        death_case.repaint();
+        this.repaint();
     }
 
     public void next_turn() {
         this.turn = (this.turn + 1) % this.players.size();
-        System.out.println(this.turn);
+        for (Player p : this.players)
+            p.reset_actions();
     }
 
-    public void kill(Player player) {
-        this.players.remove(player);
-    }
-
-    public Case next_case(Coord c, Direction d) {
+    private Case next_case(Coord c, Direction d) {
         return this.get_case(c.next_coord(d));
     }
 
-    public void move_player(Player player, Direction d) {
-        Case next_case = this.next_case(player.coord(), d);
-        if (!next_case.is_submerged() && next_case.is_in_bound())
+    public void move_player(Player player, Case next_case) {
+        if (!next_case.is_submerged() && next_case.is_adjacent(player.coord())) {
+            this.get_case(player.coord()).remove_pion();
             player.move(next_case.coord());
+            this.get_case(player.coord()).add_pion();
+            player.has_moved = true;
+            player.is_drowning = false;
+        } else if (!next_case.is_submerged() && player.has_helico) {
+            this.get_case(player.coord()).remove_pion();
+            player.move(next_case.coord());
+            this.get_case(player.coord()).add_pion();
+            player.has_helico = false;
+            player.is_drowning = false;
+
+            for (Player p : this.get_players()) {
+                if (!player.coord().equal(this.get_heliport())) {
+                    this.get_case(p.coord()).remove_pion();
+                    p.move(next_case.coord());
+                    this.get_case(p.coord()).add_pion();
+                    p.is_drowning = false;
+                }
+            }
+        }
     }
 
-    public void dry_out(Player player, Coord c) {
+    public void dry_out(Player player, Case target) {
         Coord position = player.coord();
-        Case target = this.get_case(c);
-        if (!target.is_submerged() && target.is_adjacent(position))
+        if (target.is_flooded() && target.is_adjacent(position)) {
             target.dry_out();
+            player.has_dried_out = true;
+        } else if (target.is_flooded() && player.has_sandbag) {
+            target.dry_out();
+            player.has_sandbag = false;
+        }
     }
 
     public void pick_up_artifact(Player player) {
-        Coord position = player.coord();
-        if (this.artifacts.containsKey(position)) {
-            Element e = this.get_element(position);
+        Case position = this.get_player_case(player);
+        if (position.has_artifact()) {
+            Element e = this.artifact_element(position.coord());
             if (player.has_key(e))
                 player.pick_up_artifact(e);
         }
@@ -106,23 +163,27 @@ class Plateau extends Grille {
     public void search_key(Player player) {
         Random rand = new Random();
         int roll = rand.nextInt(100) + 1;
-        if (roll > 75) {
+        if (90 < roll) { // helico
+            player.has_helico = true;
+        } else if (80 < roll && roll <= 90) { // sandbag
+            player.has_sandbag = true;
+        } else if (50 < roll) { // find key
             Element random_elem = Element.values()[rand.nextInt(4)];
             player.pick_up_key(random_elem);
-        } else if (roll <= 10) {
+        } else if (roll <= 10) { // water rising
             Case position = this.get_case(player.coord());
             position.flood();
         }
     }
 
-    public Case random_not_submerged_case() {
+    private Case random_not_submerged_case() {
         Random rand = new Random();
         Case random_case = this.not_submerged.get(rand.nextInt(this.not_submerged.size()));
         return random_case;
     }
 
     public void flood() {
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < Math.min(3, this.not_submerged.size()); i++) {
             Case random_case = this.random_not_submerged_case();
             random_case.flood();
             if (random_case.is_submerged()) {
@@ -142,23 +203,50 @@ class Plateau extends Grille {
         return true;
     }
 
+    public boolean has_won() {
+        ArrayList<Player> players = this.get_players();
+
+        // if all players are at the heliport
+        for (Player player : players) {
+            Coord position = player.coord();
+            if (!position.equal(this.get_heliport()))
+                return false;
+        }
+
+        // if all artifacts are gathered
+        for (Element e : Element.values()) {
+            boolean fetched = false;
+            for (Player player : players) {
+                if (player.has_artifact(e)) {
+                    fetched = true;
+                    break;
+                }
+            }
+            if (!fetched)
+                return false;
+        }
+
+        return true;
+    }
+
     public boolean is_winnable() {
+        ArrayList<Player> players = this.get_players();
         // if all players are dead
         if (players.isEmpty())
             return false;
-
+        
         // if the heliport is inaccessible
         if (this.is_inaccessible(this.get_case(heliport)))
             return false;
 
         // an artifact zone is inaccessible and the corresponding artifact didn't get
         // fetched
-        for (Coord coord : this.artifacts.keySet()) {
+        for (Coord coord : this.get_artifacts()) {
             Case c = this.get_case(coord);
             if (this.is_inaccessible(c)) {
-                Element elem = this.get_element(c.coord());
+                Element elem = this.artifact_element(c.coord());
                 boolean fetched = false;
-                for (Player player : this.players) {
+                for (Player player : players) {
                     if (player.has_artifact(elem)) {
                         fetched = true;
                         break;
@@ -170,18 +258,5 @@ class Plateau extends Grille {
         }
 
         return true;
-    }
-
-    public void play() {
-        /* 
-            1. Effectuer jusqu’a trois actions a choisir parmi :
-            — se deplacer vers une zone adjacente non submergee
-
-            — assecher la zone sur laquelle il se trouve ou une zone
-            adjacente si la zone visee est inondee mais pas submergee
-
-            — recuperer un artefact s’il se trouve sur une zone
-            d’artefact et possede une cle correspondante.
-        */
     }
 }

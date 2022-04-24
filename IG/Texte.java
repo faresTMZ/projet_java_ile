@@ -8,6 +8,10 @@ public class Texte extends JLabel {
 	    super(texte);
     }
 
+    public Texte(String texte, boolean center) {
+	    super(texte);
+    }
+
     public void changeTexte(String texte) {
 	    this.setText(texte);
 	    this.repaint();
